@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UAS Innholdsverktøy</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>UAS Innholdsverktøy</h1>
+    <button id="logoutBtn" class="linklike" hidden>Logg ut</button>
+  </header>
+
+  <main id="app">
+    <!-- LOGIN -->
+    <section id="loginView" class="card">
+      <h2>Logg inn</h2>
+      <form id="loginForm">
+        <label for="password">Passord</label>
+        <input type="password" id="password" required autocomplete="current-password" />
+        <button type="submit">Logg inn</button>
+        <p id="loginError" class="error" hidden></p>
+      </form>
+    </section>
+
+    <!-- MAIN TOOL -->
+    <section id="mainView" hidden>
+      <section class="card">
+        <h2>1. Last opp Word-dokument og bilder</h2>
+        <p class="hint">
+          Word-dokumentet må bruke faste overskrifter (TITTEL, INGRESS, HOVEDTEKST, BILDE, ALT-TEKST BILDE)
+          og <code>===</code> som skille mellom saker. Velg alle bildefilene sakene refererer til.
+        </p>
+        <label for="docxInput">Word-dokument (.docx)</label>
+        <input type="file" id="docxInput" accept=".docx" />
+        <label for="imagesInput">Bilder (velg flere)</label>
+        <input type="file" id="imagesInput" accept="image/*" multiple />
+        <button id="parseBtn">Tolk dokument</button>
+        <p id="parseStatus" class="hint"></p>
+      </section>
+
+      <section class="card">
+        <h2>2. Konferanseplakat (valgfritt, legges nederst i alle saker)</h2>
+        <label for="posterImageInput">Plakatbilde</label>
+        <input type="file" id="posterImageInput" accept="image/*" />
+        <label for="posterLinkInput">Lenke til arrangementet</label>
+        <input type="url" id="posterLinkInput" placeholder="https://..." />
+        <img id="posterPreview" class="poster-preview" hidden />
+      </section>
+
+      <section class="card" id="articlesSection" hidden>
+        <h2>3. Gjennomgå sakene</h2>
+        <div id="articlesList"></div>
+        <button id="submitBatchBtn" class="primary">Send inn batch som utkast</button>
+      </section>
+
+      <section class="card" id="resultsSection" hidden>
+        <h2>4. Resultat</h2>
+        <table id="resultsTable">
+          <thead><tr><th>Sak</th><th>Status</th><th>Lenke</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
