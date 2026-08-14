@@ -8,6 +8,11 @@ AI-assistent for å slå opp saker/lenker i klartekst.
 
 ## Word-mal
 
+Ferdig utfylt eksempel-mal (klar til bruk/kopiering) ligger i
+[`docs/Mal-opplasting-av-saker.docx`](docs/Mal-opplasting-av-saker.docx).
+
+
+
 Ett dokument kan inneholde flere saker. Skille mellom saker: en egen linje med `===`.
 
 ```
