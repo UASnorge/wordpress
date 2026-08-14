@@ -1,8 +1,10 @@
-# UAS Innholdsverktøy
+# WordPress Infosak Batch Administrator
 
 Batch-opplasting av saker (tittel, ingress, hovedtekst, bilde) fra et Word-dokument
 til WordPress som utkast, med AI-analyse av innholdet og automatisk utfylling av
-sosiale medier-felt (Yoast SEO) og konferanseplakat.
+sosiale medier-felt (Yoast SEO) og konferanseplakat. Har også en Oversikt-fane for
+å administrere eksisterende saker (bulk-publisering, bulk-stikkord, lenker) og en
+AI-assistent for å slå opp saker/lenker i klartekst.
 
 ## Word-mal
 
@@ -69,18 +71,37 @@ allerede blir riktige.
 
 ## Bruk
 
+### Ny batch
 1. Åpne appen, logg inn med `APP_ACCESS_PASSWORD`.
 2. Last opp Word-dokumentet og alle tilhørende bilder.
-3. Trykk "Tolk dokument" — sakene vises som kort du kan redigere.
+3. Trykk "Tolk dokument" — sakene vises som kort du kan redigere. Ingen grense på
+   antall saker (testet med batcher godt over 20).
 4. Sett ev. konferanseplakat + lenke (gjelder for hele batchen).
 5. For hver sak: sjekk/rediger tekst, huk av kategori, skriv stikkord, evt. trykk
    "Analyser med AI" for en rask kvalitetssjekk.
 6. Trykk "Send inn batch som utkast" — alle saker opprettes som **utkast** i
-   WordPress. Åpne lenkene i resultat-tabellen for å kvalitetssikre og publisere
-   manuelt.
+   WordPress, og merkes automatisk med et skjult stikkord (`batch-ÅÅÅÅMMDD-TTMM`)
+   slik at de er lette å finne igjen samlet i Oversikt-fanen.
+
+### Oversikt
+Viser saker hentet direkte fra WordPress (utkast + publiserte). Filtrer på status,
+søk, eller "Vis kun siste opplasting". Velg flere saker med avkrysningsboksene for å:
+- **Publisere** eller **sette som utkast** flere samtidig (ber om bekreftelse)
+- **Legge til** eller **erstatte** stikkord på flere samtidig
+- **Slette** (papirkurv) flere samtidig (ber om bekreftelse)
+- **Kopiere lenker** for valgte saker til utklippstavlen
+
+### AI-assistent
+En enkel chat som kan slå opp faktiske saker/lenker/status i WordPress via et
+verktøy (`list_posts`) den kaller selv. Den kan **ikke** publisere, slette eller
+redigere noe på egen hånd — det er et bevisst designvalg for å unngå at en AI
+gjør uopprettelige endringer på livesiden uten et eksplisitt klikk fra deg. Alle
+endringer skjer via knappene i Oversikt-fanen.
 
 ## Kjente begrensninger / videre arbeid
 
-- Ingen automatisk bildekomprimering ennå (forbedringsforslag fra tidligere).
+- Ingen automatisk bildekomprimering ennå.
 - Duplikatsjekk på tittel/slug er ikke implementert.
-- AI-analysen er rådgivende og blokkerer ikke innsending.
+- AI-analysen (i Ny batch) er rådgivende og blokkerer ikke innsending.
+- AI-assistenten er read-only per design (se over).
+- Oversikt henter inntil 40 saker per side uten paginering i grensesnittet ennå.

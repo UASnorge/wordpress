@@ -109,10 +109,88 @@ async function createPost({ title, contentHtml, excerpt, status, categoryIds, ta
   });
 }
 
+async function listPosts({ status = "draft,publish", search = "", category, tag, page = 1, perPage = 40 } = {}) {
+  const params = new URLSearchParams({
+    status,
+    per_page: String(perPage),
+    page: String(page),
+    _embed: "wp:featuredmedia,wp:term",
+    orderby: "date",
+    order: "desc",
+  });
+  if (search) params.set("search", search);
+  if (category) params.set("categories", String(category));
+  if (tag) params.set("tags", String(tag));
+
+  const url = `/wp/v2/posts?${params.toString()}`;
+  const res = await fetch(`${wpBaseUrl()}/wp-json${url}`, { headers: { Authorization: authHeader() } });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : [];
+  if (!res.ok) {
+    const err = new Error((data && data.message) || `WP-feil ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  const totalPages = Number(res.headers.get("x-wp-totalpages") || 1);
+  const total = Number(res.headers.get("x-wp-total") || data.length);
+
+  const posts = data.map((p) => {
+    const embedded = p._embedded || {};
+    const media = (embedded["wp:featuredmedia"] || [])[0];
+    const terms = embedded["wp:term"] || [];
+    const categories = (terms[0] || []).map((t) => t.name);
+    const tags = (terms[1] || []).map((t) => t.name);
+    return {
+      id: p.id,
+      title: p.title?.rendered || "(uten tittel)",
+      status: p.status,
+      date: p.date,
+      link: p.link,
+      editLink: `${wpBaseUrl()}/wp-admin/post.php?post=${p.id}&action=edit`,
+      excerpt: (p.excerpt?.rendered || "").replace(/<[^>]+>/g, "").trim(),
+      categories,
+      tags,
+      thumbnail: media ? media.source_url : null,
+    };
+  });
+
+  return { posts, totalPages, total };
+}
+
+async function getPostTagIds(postId) {
+  const post = await wpFetch(`/wp/v2/posts/${postId}?_fields=tags`);
+  return post.tags || [];
+}
+
+async function updatePostStatus(postId, status) {
+  return wpFetch(`/wp/v2/posts/${postId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+}
+
+async function updatePostTags(postId, tagIds) {
+  return wpFetch(`/wp/v2/posts/${postId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tags: tagIds }),
+  });
+}
+
+async function trashPost(postId) {
+  return wpFetch(`/wp/v2/posts/${postId}`, { method: "DELETE" });
+}
+
 module.exports = {
   getCategories,
   getTags,
   resolveTagIds,
   uploadMedia,
   createPost,
+  listPosts,
+  getPostTagIds,
+  updatePostStatus,
+  updatePostTags,
+  trashPost,
 };

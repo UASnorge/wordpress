@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UAS Innholdsverktøy</title>
+  <title>WordPress Infosak Batch Administrator</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="topbar">
-    <h1>UAS Innholdsverktøy</h1>
+    <h1>WordPress Infosak Batch Administrator</h1>
     <button id="logoutBtn" class="linklike" hidden>Logg ut</button>
   </header>
 
@@ -26,41 +26,122 @@
 
     <!-- MAIN TOOL -->
     <section id="mainView" hidden>
-      <section class="card">
-        <h2>1. Last opp Word-dokument og bilder</h2>
-        <p class="hint">
-          Word-dokumentet må bruke faste overskrifter (TITTEL, INGRESS, HOVEDTEKST, BILDE, ALT-TEKST BILDE)
-          og <code>===</code> som skille mellom saker. Velg alle bildefilene sakene refererer til.
-        </p>
-        <label for="docxInput">Word-dokument (.docx)</label>
-        <input type="file" id="docxInput" accept=".docx" />
-        <label for="imagesInput">Bilder (velg flere)</label>
-        <input type="file" id="imagesInput" accept="image/*" multiple />
-        <button id="parseBtn">Tolk dokument</button>
-        <p id="parseStatus" class="hint"></p>
+      <nav class="tabs">
+        <button class="tabBtn active" data-tab="batchTab">Ny batch</button>
+        <button class="tabBtn" data-tab="overviewTab">Oversikt</button>
+        <button class="tabBtn" data-tab="assistantTab">AI-assistent</button>
+      </nav>
+
+      <!-- TAB: NY BATCH -->
+      <section id="batchTab" class="tabPanel">
+        <section class="card">
+          <h2>1. Last opp Word-dokument og bilder</h2>
+          <p class="hint">
+            Word-dokumentet må bruke faste overskrifter (TITTEL, INGRESS, HOVEDTEKST, BILDE, ALT-TEKST BILDE)
+            og <code>===</code> som skille mellom saker. Velg alle bildefilene sakene refererer til. Det er
+            ingen grense på antall saker i ett dokument.
+          </p>
+          <label for="docxInput">Word-dokument (.docx)</label>
+          <input type="file" id="docxInput" accept=".docx" />
+          <label for="imagesInput">Bilder (velg flere)</label>
+          <input type="file" id="imagesInput" accept="image/*" multiple />
+          <button id="parseBtn">Tolk dokument</button>
+          <p id="parseStatus" class="hint"></p>
+        </section>
+
+        <section class="card">
+          <h2>2. Konferanseplakat (valgfritt, legges nederst i alle saker)</h2>
+          <label for="posterImageInput">Plakatbilde</label>
+          <input type="file" id="posterImageInput" accept="image/*" />
+          <label for="posterLinkInput">Lenke til arrangementet</label>
+          <input type="url" id="posterLinkInput" placeholder="https://..." />
+          <img id="posterPreview" class="poster-preview" hidden />
+        </section>
+
+        <section class="card" id="articlesSection" hidden>
+          <h2>3. Gjennomgå sakene (<span id="articleCount">0</span>)</h2>
+          <div id="articlesList"></div>
+          <button id="submitBatchBtn" class="primary">Send inn batch som utkast</button>
+        </section>
+
+        <section class="card" id="resultsSection" hidden>
+          <h2>4. Resultat</h2>
+          <p class="hint" id="batchTagHint"></p>
+          <table id="resultsTable">
+            <thead><tr><th>Sak</th><th>Status</th><th>Lenke</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </section>
       </section>
 
-      <section class="card">
-        <h2>2. Konferanseplakat (valgfritt, legges nederst i alle saker)</h2>
-        <label for="posterImageInput">Plakatbilde</label>
-        <input type="file" id="posterImageInput" accept="image/*" />
-        <label for="posterLinkInput">Lenke til arrangementet</label>
-        <input type="url" id="posterLinkInput" placeholder="https://..." />
-        <img id="posterPreview" class="poster-preview" hidden />
+      <!-- TAB: OVERSIKT -->
+      <section id="overviewTab" class="tabPanel" hidden>
+        <section class="card">
+          <div class="filterRow">
+            <label class="inline"><span>Status</span>
+              <select id="filterStatus">
+                <option value="draft,publish">Alle</option>
+                <option value="draft">Kun utkast</option>
+                <option value="publish">Kun publisert</option>
+              </select>
+            </label>
+            <label class="inline"><span>Søk</span>
+              <input type="text" id="filterSearch" placeholder="Søk i tittel..." />
+            </label>
+            <label class="inline checkbox-inline">
+              <input type="checkbox" id="filterLastBatch" />
+              <span>Vis kun siste opplasting</span>
+            </label>
+            <button id="refreshOverviewBtn">Oppdater</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <div id="bulkActionsBar" class="bulk-bar" hidden>
+            <span id="selectedCount">0 valgt</span>
+            <button id="bulkPublishBtn">Publiser valgte</button>
+            <button id="bulkDraftBtn">Sett som utkast</button>
+            <button id="bulkTrashBtn" class="danger">Slett valgte</button>
+            <button id="copyLinksBtn">Kopier lenker</button>
+            <span class="tag-bulk-edit">
+              <input type="text" id="bulkTagsInput" placeholder="stikkord, komma-separert" />
+              <button id="bulkAddTagsBtn">Legg til stikkord</button>
+              <button id="bulkReplaceTagsBtn">Erstatt stikkord</button>
+            </span>
+          </div>
+          <p id="overviewStatus" class="hint">Laster …</p>
+          <table id="overviewTable">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="selectAllCheckbox" /></th>
+                <th></th>
+                <th>Tittel</th>
+                <th>Status</th>
+                <th>Kategori</th>
+                <th>Stikkord</th>
+                <th>Dato</th>
+                <th>Lenker</th>
+              </tr>
+            </thead>
+            <tbody id="overviewTbody"></tbody>
+          </table>
+        </section>
       </section>
 
-      <section class="card" id="articlesSection" hidden>
-        <h2>3. Gjennomgå sakene</h2>
-        <div id="articlesList"></div>
-        <button id="submitBatchBtn" class="primary">Send inn batch som utkast</button>
-      </section>
-
-      <section class="card" id="resultsSection" hidden>
-        <h2>4. Resultat</h2>
-        <table id="resultsTable">
-          <thead><tr><th>Sak</th><th>Status</th><th>Lenke</th></tr></thead>
-          <tbody></tbody>
-        </table>
+      <!-- TAB: AI-ASSISTENT -->
+      <section id="assistantTab" class="tabPanel" hidden>
+        <section class="card">
+          <p class="hint">
+            Spør om sakene på nettstedet, f.eks. «gi meg lenkene til sakene fra siste batch» eller
+            «hvilke utkast mangler kategori». Assistenten henter faktiske data fra WordPress, men kan
+            ikke publisere, slette eller redigere noe selv — det gjør du i Oversikt-fanen.
+          </p>
+          <div id="chatLog" class="chat-log"></div>
+          <div class="chat-input-row">
+            <textarea id="chatInput" rows="2" placeholder="Skriv en melding …"></textarea>
+            <button id="chatSendBtn" class="primary">Send</button>
+          </div>
+        </section>
       </section>
     </section>
   </main>

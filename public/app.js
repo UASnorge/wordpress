@@ -7,6 +7,10 @@ const state = {
   categories: [],
   tags: [],
   poster: { file: null, link: "" },
+  lastBatchTag: localStorage.getItem("uas_last_batch_tag") || null,
+  overviewPosts: [],
+  selectedIds: new Set(),
+  chatHistory: [],
 };
 
 // ---------- helpers ----------
@@ -38,6 +42,23 @@ function findImageFile(filename) {
   if (!filename) return null;
   return state.imageFiles.get(filename.trim().toLowerCase()) || null;
 }
+
+function escapeHtml(str) {
+  return String(str || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// ---------- tabs ----------
+
+document.querySelectorAll(".tabBtn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tabBtn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".tabPanel").forEach((p) => (p.hidden = true));
+    btn.classList.add("active");
+    const panel = el(btn.dataset.tab);
+    panel.hidden = false;
+    if (btn.dataset.tab === "overviewTab") loadOverview();
+  });
+});
 
 // ---------- login ----------
 
@@ -157,6 +178,7 @@ function renderArticles() {
   const list = el("articlesList");
   list.innerHTML = "";
   section.hidden = state.articles.length === 0;
+  el("articleCount").textContent = String(state.articles.length);
 
   state.articles.forEach((article, idx) => {
     const imgFile = findImageFile(article.imageFilename);
@@ -269,11 +291,22 @@ function escapeAttr(str) {
 
 // ---------- submit batch ----------
 
+function makeBatchTag() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `batch-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
+
 el("submitBatchBtn").addEventListener("click", async () => {
   const btn = el("submitBatchBtn");
   btn.disabled = true;
 
+  const batchTag = makeBatchTag();
+  state.lastBatchTag = batchTag;
+  localStorage.setItem("uas_last_batch_tag", batchTag);
+
   el("resultsSection").hidden = false;
+  el("batchTagHint").textContent = `Alle saker i denne sendingen merkes med stikkordet "${batchTag}" - bruk "Vis kun siste opplasting" i Oversikt-fanen for å finne dem raskt igjen.`;
   const tbody = document.querySelector("#resultsTable tbody");
   tbody.innerHTML = "";
 
@@ -316,6 +349,7 @@ el("submitBatchBtn").addEventListener("click", async () => {
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
+      tagNames.push(batchTag);
 
       const result = await apiFetch("/create-post", {
         method: "POST",
@@ -342,4 +376,206 @@ el("submitBatchBtn").addEventListener("click", async () => {
   }
 
   btn.disabled = false;
+});
+
+// ---------- oversikt ----------
+
+async function loadOverview() {
+  const statusEl = el("overviewStatus");
+  statusEl.textContent = "Laster …";
+  statusEl.hidden = false;
+  state.selectedIds.clear();
+  updateBulkBar();
+
+  const status = el("filterStatus").value;
+  const search = el("filterSearch").value.trim();
+  const params = new URLSearchParams({ status });
+  if (search) params.set("search", search);
+
+  const useLastBatch = el("filterLastBatch").checked;
+  if (useLastBatch) {
+    if (!state.lastBatchTag) {
+      statusEl.textContent = "Ingen batch er lastet opp i denne nettleseren ennå.";
+      state.overviewPosts = [];
+      renderOverviewTable();
+      return;
+    }
+    params.set("tag", state.lastBatchTag);
+  }
+
+  try {
+    // For batch-tag-filter må vi slå opp tag-id via taxonomies, enklest er å be serveren
+    // filtrere på navn - men list-posts tar imot tag-id. Vi henter derfor tags og finner id.
+    if (useLastBatch) {
+      const tagMatch = state.tags.find((t) => t.name.toLowerCase() === state.lastBatchTag.toLowerCase());
+      if (tagMatch) {
+        params.set("tag", String(tagMatch.id));
+      } else {
+        // tag finnes kanskje ikke i cachen ennå (opprettet nå nylig) - hent på nytt
+        const fresh = await apiFetch(`/wp-taxonomies`);
+        state.tags = fresh.tags || [];
+        const freshMatch = state.tags.find((t) => t.name.toLowerCase() === state.lastBatchTag.toLowerCase());
+        if (freshMatch) params.set("tag", String(freshMatch.id));
+        else params.delete("tag");
+      }
+    }
+
+    const data = await apiFetch(`/list-posts?${params.toString()}`);
+    state.overviewPosts = data.posts || [];
+    statusEl.hidden = true;
+    renderOverviewTable();
+  } catch (err) {
+    statusEl.textContent = `Feil: ${err.message}`;
+  }
+}
+
+function renderOverviewTable() {
+  const tbody = el("overviewTbody");
+  tbody.innerHTML = "";
+  state.overviewPosts.forEach((post) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="checkbox" data-id="${post.id}" /></td>
+      <td>${post.thumbnail ? `<img class="thumb" src="${post.thumbnail}" />` : `<span class="thumb-placeholder"></span>`}</td>
+      <td><a href="${post.editLink}" target="_blank">${escapeHtml(post.title)}</a></td>
+      <td><span class="badge ${post.status === "publish" ? "ok" : "warn"}">${post.status === "publish" ? "Publisert" : "Utkast"}</span></td>
+      <td>${post.categories.map(escapeHtml).join(", ") || "<span class=\"badge error\">Mangler</span>"}</td>
+      <td>${post.tags.filter((t) => !/^batch-\d{8}-\d{4}$/.test(t)).map(escapeHtml).join(", ")}</td>
+      <td>${new Date(post.date).toLocaleDateString("no-NO")}</td>
+      <td>
+        <a href="${post.link}" target="_blank">Åpne</a> ·
+        <a href="${post.editLink}" target="_blank">Rediger</a>
+      </td>
+    `;
+    tr.querySelector("input[type=checkbox]").addEventListener("change", (e) => {
+      if (e.target.checked) state.selectedIds.add(post.id);
+      else state.selectedIds.delete(post.id);
+      updateBulkBar();
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function updateBulkBar() {
+  const bar = el("bulkActionsBar");
+  const count = state.selectedIds.size;
+  bar.hidden = count === 0;
+  el("selectedCount").textContent = `${count} valgt`;
+  el("selectAllCheckbox").checked = count > 0 && count === state.overviewPosts.length;
+}
+
+el("selectAllCheckbox").addEventListener("change", (e) => {
+  state.selectedIds.clear();
+  if (e.target.checked) state.overviewPosts.forEach((p) => state.selectedIds.add(p.id));
+  document.querySelectorAll("#overviewTbody input[type=checkbox]").forEach((cb) => {
+    cb.checked = e.target.checked;
+  });
+  updateBulkBar();
+});
+
+el("refreshOverviewBtn").addEventListener("click", loadOverview);
+el("filterStatus").addEventListener("change", loadOverview);
+el("filterLastBatch").addEventListener("change", loadOverview);
+el("filterSearch").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") loadOverview();
+});
+
+async function runBulkAction(action, extra = {}) {
+  const ids = [...state.selectedIds];
+  if (ids.length === 0) return;
+
+  const confirmations = {
+    publish: `Publisere ${ids.length} sak(er) live på nettstedet?`,
+    trash: `Slette (flytte til papirkurv) ${ids.length} sak(er)? Dette kan angres i WP-admin sin papirkurv.`,
+  };
+  if (confirmations[action] && !confirm(confirmations[action])) return;
+
+  try {
+    const data = await apiFetch("/bulk-update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids, action, ...extra }),
+    });
+    const failed = data.results.filter((r) => !r.ok);
+    if (failed.length) {
+      alert(`${failed.length} av ${ids.length} feilet:\n` + failed.map((f) => `#${f.id}: ${f.error}`).join("\n"));
+    }
+    await loadOverview();
+  } catch (err) {
+    alert(`Feil: ${err.message}`);
+  }
+}
+
+el("bulkPublishBtn").addEventListener("click", () => runBulkAction("publish"));
+el("bulkDraftBtn").addEventListener("click", () => runBulkAction("draft"));
+el("bulkTrashBtn").addEventListener("click", () => runBulkAction("trash"));
+
+el("bulkAddTagsBtn").addEventListener("click", () => {
+  const tagNames = (el("bulkTagsInput").value || "").split(",").map((t) => t.trim()).filter(Boolean);
+  if (!tagNames.length) return alert("Skriv inn minst ett stikkord.");
+  runBulkAction("add_tags", { tagNames });
+});
+
+el("bulkReplaceTagsBtn").addEventListener("click", () => {
+  const tagNames = (el("bulkTagsInput").value || "").split(",").map((t) => t.trim()).filter(Boolean);
+  if (!confirm(`Dette ERSTATTER alle eksisterende stikkord på ${state.selectedIds.size} sak(er). Fortsette?`)) return;
+  runBulkAction("replace_tags", { tagNames });
+});
+
+el("copyLinksBtn").addEventListener("click", async () => {
+  const ids = new Set(state.selectedIds);
+  const posts = state.overviewPosts.filter((p) => ids.has(p.id));
+  const text = posts.map((p) => `${p.title}: ${p.link}`).join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    alert(`${posts.length} lenke(r) kopiert til utklippstavlen.`);
+  } catch {
+    prompt("Kopier lenkene manuelt:", text);
+  }
+});
+
+// ---------- AI-assistent ----------
+
+function renderChat() {
+  const log = el("chatLog");
+  log.innerHTML = state.chatHistory
+    .map(
+      (m) =>
+        `<div class="chat-msg ${m.role}"><div class="bubble">${escapeHtml(m.content)}</div></div>`
+    )
+    .join("");
+  log.scrollTop = log.scrollHeight;
+}
+
+async function sendChatMessage() {
+  const input = el("chatInput");
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  state.chatHistory.push({ role: "user", content: text });
+  renderChat();
+
+  const thinkingMsg = { role: "assistant", content: "…" };
+  state.chatHistory.push(thinkingMsg);
+  renderChat();
+
+  try {
+    const data = await apiFetch("/assistant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: state.chatHistory.slice(0, -1) }),
+    });
+    thinkingMsg.content = data.reply || "(tomt svar)";
+  } catch (err) {
+    thinkingMsg.content = `Feil: ${err.message}`;
+  }
+  renderChat();
+}
+
+el("chatSendBtn").addEventListener("click", sendChatMessage);
+el("chatInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
 });
