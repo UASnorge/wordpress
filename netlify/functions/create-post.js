@@ -17,7 +17,7 @@ exports.handler = async (event) => {
 
   try {
     const data = JSON.parse(event.body || "{}");
-    const { title, ingress, body, categoryIds = [], tagNames = [], featuredMediaId, featuredMediaUrl, status, poster } = data;
+    const { title, ingress, body, categoryIds = [], tagNames = [], featuredMediaId, status, poster } = data;
 
     if (!title || !body) {
       return { statusCode: 400, body: JSON.stringify({ error: "Mangler tittel eller hovedtekst." }) };
@@ -26,15 +26,14 @@ exports.handler = async (event) => {
     const tagIds = await resolveTagIds(tagNames);
     const contentHtml = bodyTextToHtml(body) + posterBlockHtml(poster);
 
-    const meta = {};
-    if (featuredMediaId) {
-      meta["_yoast_wpseo_title"] = title;
-      meta["_yoast_wpseo_metadesc"] = ingress || "";
-      meta["_yoast_wpseo_opengraph-title"] = title;
-      meta["_yoast_wpseo_opengraph-description"] = ingress || "";
-      if (featuredMediaUrl) meta["_yoast_wpseo_opengraph-image"] = featuredMediaUrl;
-      meta["_yoast_wpseo_opengraph-image-id"] = String(featuredMediaId);
-    }
+    // Yoast fyller selv sosial tittel/beskrivelse/bilde ut fra disse to feltene
+    // og hovedbildet (featured_media) - bekreftet ved test mot uasnorway.no.
+    // De direkte opengraph-*-meta-feltene er ikke skrivbare via REST API uten
+    // en egen mu-plugin, og trengs ikke her siden fallback allerede gir riktig resultat.
+    const meta = {
+      "_yoast_wpseo_title": title,
+      "_yoast_wpseo_metadesc": ingress || "",
+    };
 
     const post = await createPost({
       title,

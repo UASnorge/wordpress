@@ -42,40 +42,22 @@ Kategori og stikkord velges i appen, ikke i dokumentet.
 **Ingen av disse skal noensinne limes inn i en chat med Claude** — legg dem
 direkte inn i Netlifys miljøvariabel-skjema.
 
-## Viktig: Yoast SEO-felt må åpnes for REST API
+## Yoast SEO-felt (sosiale medier)
 
-Appen skriver "sosial tittel", "sosial beskrivelse" og "sosialt bilde" direkte til
-Yoasts metafelt. Som standard tillater IKKE WordPress REST API skriving til disse
-feltene. Legg til denne snutten som en **mu-plugin** på nettstedet
-(`wp-content/mu-plugins/uas-rest-meta.php`):
+Verifisert ved test mot uasnorway.no (14.08.2026, sak-id 19520): `_yoast_wpseo_title`
+og `_yoast_wpseo_metadesc` er allerede skrivbare via REST API på dette nettstedet.
+Yoast bruker disse to feltene, sammen med hovedbildet (`featured_media`), som
+automatisk fallback for sosiale medier-fanen når ingen egne Facebook/Twitter-felt
+er satt eksplisitt:
 
-```php
-<?php
-add_action('init', function () {
-    $fields = [
-        '_yoast_wpseo_title'                => 'string',
-        '_yoast_wpseo_metadesc'             => 'string',
-        '_yoast_wpseo_opengraph-title'      => 'string',
-        '_yoast_wpseo_opengraph-description'=> 'string',
-        '_yoast_wpseo_opengraph-image'      => 'string',
-        '_yoast_wpseo_opengraph-image-id'   => 'string',
-    ];
-    foreach ($fields as $key => $type) {
-        register_post_meta('post', $key, [
-            'show_in_rest' => true,
-            'single'       => true,
-            'type'         => $type,
-            'auth_callback' => function () {
-                return current_user_can('edit_posts');
-            },
-        ]);
-    }
-});
-```
+- **Sosial tittel** ← `_yoast_wpseo_title` (= sakens tittel)
+- **Sosial beskrivelse** ← `_yoast_wpseo_metadesc` (= ingressen)
+- **Sosialt bilde** ← hovedbildet (featured image)
 
-Uten dette vil postene fortsatt bli opprettet fint, men de sosiale feltene i Yoast
-forblir tomme til noen fyller dem manuelt i WP-admin. **Dette bør testes med én
-enkelt sak før du kjører en full batch på 20.**
+Dette dekker kravet uten behov for noen ekstra plugin. De direkte
+`opengraph-*`-metafeltene er IKKE skrivbare via REST på dette nettstedet (testet
+og bekreftet ignorert av WP), men trengs altså ikke siden fallback-verdiene
+allerede blir riktige.
 
 ## Deploy
 
@@ -102,5 +84,3 @@ enkelt sak før du kjører en full batch på 20.**
 - Ingen automatisk bildekomprimering ennå (forbedringsforslag fra tidligere).
 - Duplikatsjekk på tittel/slug er ikke implementert.
 - AI-analysen er rådgivende og blokkerer ikke innsending.
-- Test alltid med 1 sak først etter deploy, spesielt Yoast-feltene, før du kjører
-  en full batch.
