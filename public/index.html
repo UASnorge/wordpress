@@ -29,7 +29,6 @@
       <nav class="tabs">
         <button class="tabBtn active" data-tab="batchTab">Ny batch</button>
         <button class="tabBtn" data-tab="overviewTab">Oversikt</button>
-        <button class="tabBtn" data-tab="assistantTab">AI-assistent</button>
       </nav>
 
       <!-- TAB: NY BATCH -->
@@ -128,22 +127,31 @@
         </section>
       </section>
 
-      <!-- TAB: AI-ASSISTENT -->
-      <section id="assistantTab" class="tabPanel" hidden>
-        <section class="card">
-          <p class="hint">
-            Spør om sakene på nettstedet, f.eks. «gi meg lenkene til sakene fra siste batch» eller
-            «hvilke utkast mangler kategori». Assistenten henter faktiske data fra WordPress, men kan
-            ikke publisere, slette eller redigere noe selv — det gjør du i Oversikt-fanen.
-          </p>
-          <div id="chatLog" class="chat-log"></div>
-          <div class="chat-input-row">
-            <textarea id="chatInput" rows="2" placeholder="Skriv en melding …"></textarea>
-            <button id="chatSendBtn" class="primary">Send</button>
-          </div>
-        </section>
-      </section>
     </section>
+
+    <!-- FLYTENDE AI-CHAT-WIDGET -->
+    <button id="chatToggleBtn" class="chat-fab" hidden aria-label="Åpne AI-assistent">
+      <span class="chat-fab-icon">💬</span>
+    </button>
+
+    <div id="chatWidget" class="chat-widget" hidden>
+      <div class="chat-widget-header">
+        <div>
+          <strong>AI-assistent</strong>
+          <span class="chat-widget-subtitle">Spør om saker, lenker, status …</span>
+        </div>
+        <button id="chatCloseBtn" class="linklike" aria-label="Lukk">✕</button>
+      </div>
+      <p class="hint chat-widget-hint">
+        Henter faktiske data fra WordPress. Kan ikke publisere, slette eller redigere selv —
+        det gjør du i Oversikt-fanen.
+      </p>
+      <div id="chatLog" class="chat-log"></div>
+      <div class="chat-input-row">
+        <textarea id="chatInput" rows="1" placeholder="Skriv en melding …"></textarea>
+        <button id="chatSendBtn" class="primary">Send</button>
+      </div>
+    </div>
   </main>
 
   <script src="app.js"></script>

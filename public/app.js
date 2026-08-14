@@ -36,6 +36,8 @@ function logout() {
   el("loginView").hidden = false;
   el("mainView").hidden = true;
   el("logoutBtn").hidden = true;
+  el("chatToggleBtn").hidden = true;
+  el("chatWidget").hidden = true;
 }
 
 function findImageFile(filename) {
@@ -78,6 +80,7 @@ el("loginForm").addEventListener("submit", async (e) => {
     el("loginView").hidden = true;
     el("mainView").hidden = false;
     el("logoutBtn").hidden = false;
+    el("chatToggleBtn").hidden = false;
     loadTaxonomies();
   } catch (err) {
     el("loginError").textContent = err.message;
@@ -91,6 +94,7 @@ if (state.token) {
   el("loginView").hidden = true;
   el("mainView").hidden = false;
   el("logoutBtn").hidden = false;
+  el("chatToggleBtn").hidden = false;
   loadTaxonomies();
 }
 
@@ -534,7 +538,22 @@ el("copyLinksBtn").addEventListener("click", async () => {
   }
 });
 
-// ---------- AI-assistent ----------
+// ---------- AI-assistent (flytende chat-widget) ----------
+
+el("chatToggleBtn").addEventListener("click", () => {
+  el("chatWidget").hidden = false;
+  el("chatToggleBtn").hidden = true;
+  el("chatInput").focus();
+  if (el("chatLog").innerHTML === "") {
+    el("chatLog").innerHTML =
+      '<div class="chat-msg assistant"><div class="bubble">Hei! Spør meg om saker, lenker eller status - f.eks. «gi meg lenkene til sakene fra siste batch».</div></div>';
+  }
+});
+
+el("chatCloseBtn").addEventListener("click", () => {
+  el("chatWidget").hidden = true;
+  el("chatToggleBtn").hidden = false;
+});
 
 function renderChat() {
   const log = el("chatLog");
