@@ -144,9 +144,22 @@ th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(
 .chat-msg.user { text-align: right; }
 .chat-msg.user .bubble { background: var(--primary); color: white; }
 .chat-msg .bubble { display: inline-block; padding: 0.5rem 0.8rem; border-radius: 10px; background: #eef0f2; max-width: 85%; text-align: left; font-size: 0.9rem; }
-.chat-input-row { display: flex; gap: 0.5rem; flex-shrink: 0; }
+.chat-input-row { display: flex; gap: 0.5rem; flex-shrink: 0; align-items: flex-end; }
 .chat-input-row textarea { flex: 1; max-height: 6rem; }
 .chat-input-row button { margin-top: 0; align-self: flex-end; }
+.chat-attach-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.45rem 0.6rem; font-size: 1rem; line-height: 1; }
+.chat-attachment-chip {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  background: #eef3f1; border: 1px solid var(--primary); border-radius: 6px;
+  padding: 0.35rem 0.6rem; margin: 0 1rem 0.5rem; font-size: 0.8rem;
+}
+.chat-attachment-chip button { margin: 0; background: none; border: none; padding: 0 0.2rem; font-size: 0.8rem; }
+.chat-attachment-line { font-size: 0.75rem; opacity: 0.8; margin-bottom: 0.2rem; }
+.chat-download-btn {
+  display: block; margin-top: 0.4rem; font-size: 0.8rem;
+  background: white; border: 1px solid var(--primary); color: var(--primary);
+  border-radius: 6px; padding: 0.3rem 0.6rem; cursor: pointer;
+}
 
 /* Floating chat widget (chatbot-style) */
 .chat-fab {

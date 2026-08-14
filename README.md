@@ -92,11 +92,18 @@ søk, eller "Vis kun siste opplasting". Velg flere saker med avkrysningsboksene 
 - **Kopiere lenker** for valgte saker til utklippstavlen
 
 ### AI-assistent
-En enkel chat som kan slå opp faktiske saker/lenker/status i WordPress via et
-verktøy (`list_posts`) den kaller selv. Den kan **ikke** publisere, slette eller
-redigere noe på egen hånd — det er et bevisst designvalg for å unngå at en AI
-gjør uopprettelige endringer på livesiden uten et eksplisitt klikk fra deg. Alle
-endringer skjer via knappene i Oversikt-fanen.
+En flytende chat-boble (nederst til høyre, tilgjengelig fra alle faner) som kan
+slå opp faktiske saker/lenker/status i WordPress via et verktøy (`list_posts`)
+den kaller selv. Den kan **ikke** publisere, slette eller redigere noe på egen
+hånd — det er et bevisst designvalg for å unngå at en AI gjør uopprettelige
+endringer på livesiden uten et eksplisitt klikk fra deg. Alle endringer skjer
+via knappene i Oversikt-fanen.
+
+- **Last opp fil i chatten** (📎-knapp): et Word-dokument tolkes automatisk og
+  oppsummeres i chatten (du kan stille oppfølgingsspørsmål om det); et bilde
+  sendes til assistenten for vurdering (samme prinsipp som "Analyser med AI").
+- **Last ned fra chatten**: når assistenten har hentet en liste over saker, vises
+  en "Last ned CSV"-knapp under svaret.
 
 ## Kjente begrensninger / videre arbeid
 

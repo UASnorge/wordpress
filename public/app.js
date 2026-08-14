@@ -11,6 +11,7 @@ const state = {
   overviewPosts: [],
   selectedIds: new Set(),
   chatHistory: [],
+  chatAttachment: null, // File
 };
 
 // ---------- helpers ----------
@@ -558,20 +559,76 @@ el("chatCloseBtn").addEventListener("click", () => {
 function renderChat() {
   const log = el("chatLog");
   log.innerHTML = state.chatHistory
-    .map(
-      (m) =>
-        `<div class="chat-msg ${m.role}"><div class="bubble">${escapeHtml(m.content)}</div></div>`
-    )
+    .map((m, idx) => {
+      const attachmentLine = m.attachmentName
+        ? `<div class="chat-attachment-line">📎 ${escapeHtml(m.attachmentName)}</div>`
+        : "";
+      const downloadBtn =
+        m.posts && m.posts.length
+          ? `<button class="chat-download-btn" data-download-idx="${idx}" type="button">⬇ Last ned CSV (${m.posts.length} sak(er))</button>`
+          : "";
+      return `<div class="chat-msg ${m.role}"><div class="bubble">${attachmentLine}${escapeHtml(m.content)}${downloadBtn}</div></div>`;
+    })
     .join("");
   log.scrollTop = log.scrollHeight;
 }
 
+// Event delegation for nedlastingsknappene (de rendres på nytt hver gang)
+el("chatLog").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-download-idx]");
+  if (!btn) return;
+  const msg = state.chatHistory[Number(btn.dataset.downloadIdx)];
+  if (!msg || !msg.posts) return;
+  downloadPostsCsv(msg.posts);
+});
+
+function downloadPostsCsv(posts) {
+  const escapeCsv = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const header = ["Tittel", "Status", "Lenke", "Kategori", "Stikkord", "Dato"];
+  const rows = posts.map((p) =>
+    [p.title, p.status, p.link, (p.categories || []).join(" | "), (p.tags || []).join(" | "), p.date].map(escapeCsv).join(",")
+  );
+  const csv = [header.map(escapeCsv).join(","), ...rows].join("\r\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `saker-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ---------- chat-vedlegg ----------
+
+el("chatAttachBtn").addEventListener("click", () => el("chatFileInput").click());
+
+el("chatFileInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  state.chatAttachment = file;
+  el("chatAttachmentName").textContent = file.name;
+  el("chatAttachmentChip").hidden = false;
+});
+
+el("chatAttachmentRemoveBtn").addEventListener("click", () => {
+  state.chatAttachment = null;
+  el("chatFileInput").value = "";
+  el("chatAttachmentChip").hidden = true;
+});
+
 async function sendChatMessage() {
   const input = el("chatInput");
   const text = input.value.trim();
-  if (!text) return;
+  const attachment = state.chatAttachment;
+  if (!text && !attachment) return;
+
   input.value = "";
-  state.chatHistory.push({ role: "user", content: text });
+  state.chatHistory.push({ role: "user", content: text, attachmentName: attachment ? attachment.name : undefined });
+  state.chatAttachment = null;
+  el("chatFileInput").value = "";
+  el("chatAttachmentChip").hidden = true;
   renderChat();
 
   const thinkingMsg = { role: "assistant", content: "…" };
@@ -579,12 +636,14 @@ async function sendChatMessage() {
   renderChat();
 
   try {
-    const data = await apiFetch("/assistant", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: state.chatHistory.slice(0, -1) }),
-    });
+    const wireMessages = state.chatHistory.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
+    const fd = new FormData();
+    fd.append("messages", JSON.stringify(wireMessages));
+    if (attachment) fd.append("file", attachment);
+
+    const data = await apiFetch("/assistant", { method: "POST", body: fd });
     thinkingMsg.content = data.reply || "(tomt svar)";
+    thinkingMsg.posts = data.posts && data.posts.length ? data.posts : undefined;
   } catch (err) {
     thinkingMsg.content = `Feil: ${err.message}`;
   }

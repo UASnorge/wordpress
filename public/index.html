@@ -147,7 +147,13 @@
         det gjør du i Oversikt-fanen.
       </p>
       <div id="chatLog" class="chat-log"></div>
+      <div id="chatAttachmentChip" class="chat-attachment-chip" hidden>
+        <span id="chatAttachmentName"></span>
+        <button id="chatAttachmentRemoveBtn" aria-label="Fjern vedlegg">✕</button>
+      </div>
       <div class="chat-input-row">
+        <input type="file" id="chatFileInput" accept=".docx,image/*" hidden />
+        <button id="chatAttachBtn" type="button" class="chat-attach-btn" title="Legg ved fil (.docx eller bilde)">📎</button>
         <textarea id="chatInput" rows="1" placeholder="Skriv en melding …"></textarea>
         <button id="chatSendBtn" class="primary">Send</button>
       </div>
