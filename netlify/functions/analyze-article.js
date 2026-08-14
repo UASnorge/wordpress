@@ -33,7 +33,7 @@ exports.handler = async (event) => {
           "Du vurderer en nyhetssak før publisering på nettsiden til en bransjeorganisasjon.",
           "Vurder tittel, ingress og hovedtekst for språk, sammenheng og om de henger sammen.",
           image
-            ? "Vurder også om bildet passer som illustrasjon til saken."
+            ? "Vurder også om bildet passer som illustrasjon til saken, og foreslå en kort, konkret bildetekst (norsk, maks én setning) som beskriver hva som faktisk vises på bildet."
             : "Det er ikke lastet opp bilde til denne saken - flagg det som en advarsel.",
           "",
           `TITTEL: ${title}`,
@@ -41,7 +41,7 @@ exports.handler = async (event) => {
           `HOVEDTEKST: ${body}`,
           "",
           "Svar KUN med gyldig JSON på dette formatet, uten annen tekst:",
-          '{"warnings": ["kort advarsel 1", "kort advarsel 2"], "imageMatch": "god" | "usikker" | "dårlig" | "ikke_vurdert", "comment": "én kort setning med generell vurdering"}',
+          '{"warnings": ["kort advarsel 1", "kort advarsel 2"], "imageMatch": "god" | "usikker" | "dårlig" | "ikke_vurdert", "suggestedCaption": "foreslått bildetekst, eller tom streng hvis ikke bilde", "comment": "én kort setning med generell vurdering"}',
         ].join("\n"),
       },
     ];

@@ -7,8 +7,9 @@
 // ...flere avsnitt...
 // BILDE: filnavn.jpg
 // ALT-TEKST BILDE: ...
+// FOTO: ... (valgfritt - fotokreditering, kan også settes/endres i appen)
 
-const LABELS = ["TITTEL", "INGRESS", "HOVEDTEKST", "BILDE", "ALT-TEKST BILDE"];
+const LABELS = ["TITTEL", "INGRESS", "HOVEDTEKST", "BILDE", "ALT-TEKST BILDE", "FOTO"];
 
 function escapeRegex(s) {
   return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
@@ -40,6 +41,7 @@ function parseBlock(block, index) {
     body: fields["HOVEDTEKST"] || "",
     imageFilename: (fields["BILDE"] || "").trim(),
     altText: fields["ALT-TEKST BILDE"] || "",
+    photoCredit: fields["FOTO"] || "",
     parseWarnings: warnings,
   };
 }

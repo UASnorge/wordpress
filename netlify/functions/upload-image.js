@@ -20,6 +20,7 @@ exports.handler = async (event) => {
       filename: file.filename,
       mimeType: file.mimeType || "image/jpeg",
       altText: fields.altText || "",
+      caption: fields.caption || "",
     });
 
     return { statusCode: 200, body: JSON.stringify(media) };

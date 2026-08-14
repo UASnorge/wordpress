@@ -73,7 +73,7 @@ async function resolveTagIds(names) {
   return ids;
 }
 
-async function uploadMedia({ buffer, filename, mimeType, altText }) {
+async function uploadMedia({ buffer, filename, mimeType, altText, caption }) {
   const media = await wpFetch("/wp/v2/media", {
     method: "POST",
     headers: {
@@ -82,17 +82,24 @@ async function uploadMedia({ buffer, filename, mimeType, altText }) {
     },
     body: buffer,
   });
-  if (altText) {
+  if (altText || caption) {
+    const patch = {};
+    if (altText) patch.alt_text = altText;
+    if (caption) patch.caption = caption; // WP sitt "Bildetekst"-felt
     await wpFetch(`/wp/v2/media/${media.id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ alt_text: altText }),
+      body: JSON.stringify(patch),
     });
   }
   return { id: media.id, url: media.source_url };
 }
 
-async function createPost({ title, contentHtml, excerpt, status, categoryIds, tagIds, featuredMediaId, meta }) {
+async function getUsers() {
+  return wpFetch("/wp/v2/users?per_page=100&_fields=id,name");
+}
+
+async function createPost({ title, contentHtml, excerpt, status, categoryIds, tagIds, featuredMediaId, meta, authorId }) {
   return wpFetch("/wp/v2/posts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -104,6 +111,7 @@ async function createPost({ title, contentHtml, excerpt, status, categoryIds, ta
       categories: categoryIds || [],
       tags: tagIds || [],
       featured_media: featuredMediaId || undefined,
+      author: authorId || undefined,
       meta: meta || {},
     }),
   });
@@ -187,6 +195,7 @@ module.exports = {
   getTags,
   resolveTagIds,
   uploadMedia,
+  getUsers,
   createPost,
   listPosts,
   getPostTagIds,

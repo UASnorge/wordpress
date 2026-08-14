@@ -77,12 +77,20 @@ HOVEDTEKST:
 (flere avsnitt, tom linje mellom)
 BILDE: filnavn.jpg
 ALT-TEKST BILDE: ...
+FOTO: ... (valgfritt - fotokreditering)
 ===
 (neste sak...)
 ```
 
 Bilder lastes opp som egne filer (ikke embedded i Word) og matches til saken
 via filnavn. Ingen øvre grense på antall saker (testet med 24+).
+
+Kategori, stikkord og byline (forfatter, valgt blant faktiske WordPress-brukere
+via `/wp/v2/users`) settes i selve appen, ikke i dokumentet. Bildetekst (WordPress
+sin native "Bildetekst"/caption-felt på mediet, forskjellig fra alt-tekst) kan
+skrives manuelt eller foreslås av Claude ut fra selve bildet via
+"Analyser med AI" — forslaget kombineres med FOTO-feltet til én tekst
+("<bildetekst> Foto: <navn>.") som lagres på WP-mediet.
 
 ## Integrasjoner og autentisering
 

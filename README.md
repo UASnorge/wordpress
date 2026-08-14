@@ -24,6 +24,7 @@ Første avsnitt.
 Nytt avsnitt.
 BILDE: bilde-01.jpg
 ALT-TEKST BILDE: Beskrivelse av bildet for skjermlesere/SEO
+FOTO: Ola Nordmann
 ===
 TITTEL: Neste sak...
 ...
@@ -32,7 +33,12 @@ TITTEL: Neste sak...
 Last opp bildene som egne filer sammen med dokumentet (ikke limt inn i Word) —
 filnavnet i `BILDE:`-feltet må stemme med det opplastede bildets filnavn.
 
-Kategori og stikkord velges i appen, ikke i dokumentet.
+`FOTO:` er valgfritt (fotokreditering, vises som «Foto: Navn» sammen med
+bildeteksten) og kan også settes/endres i appen.
+
+Kategori, stikkord og byline (forfatter) velges i appen, ikke i dokumentet.
+Bildetekst (WordPress sin native "Bildetekst"/caption på bildet) kan skrives
+manuelt i appen, eller genereres med "Analyser med AI" ut fra selve bildet.
 
 ## Miljøvariabler (settes i Netlify → Site settings → Environment variables)
 
@@ -82,8 +88,10 @@ allerede blir riktige.
 3. Trykk "Tolk dokument" — sakene vises som kort du kan redigere. Ingen grense på
    antall saker (testet med batcher godt over 20).
 4. Sett ev. konferanseplakat + lenke (gjelder for hele batchen).
-5. For hver sak: sjekk/rediger tekst, huk av kategori, skriv stikkord, evt. trykk
-   "Analyser med AI" for en rask kvalitetssjekk.
+5. For hver sak: sjekk/rediger tekst, huk av kategori, skriv stikkord, velg
+   byline (forfatter) fra listen over WordPress-brukere, sett evt. fotokreditering,
+   og trykk "Analyser med AI" for en kvalitetssjekk som også foreslår en
+   bildetekst (WP sin native "Bildetekst"/caption på bildet) ut fra selve bildet.
 6. Trykk "Send inn batch som utkast" — alle saker opprettes som **utkast** i
    WordPress, og merkes automatisk med et skjult stikkord (`batch-ÅÅÅÅMMDD-TTMM`)
    slik at de er lette å finne igjen samlet i Oversikt-fanen.

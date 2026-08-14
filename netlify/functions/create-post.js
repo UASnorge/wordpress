@@ -17,7 +17,7 @@ exports.handler = async (event) => {
 
   try {
     const data = JSON.parse(event.body || "{}");
-    const { title, ingress, body, categoryIds = [], tagNames = [], featuredMediaId, status, poster } = data;
+    const { title, ingress, body, categoryIds = [], tagNames = [], featuredMediaId, status, poster, authorId } = data;
 
     if (!title || !body) {
       return { statusCode: 400, body: JSON.stringify({ error: "Mangler tittel eller hovedtekst." }) };
@@ -44,6 +44,7 @@ exports.handler = async (event) => {
       tagIds,
       featuredMediaId,
       meta,
+      authorId: authorId ? Number(authorId) : undefined,
     });
 
     return {

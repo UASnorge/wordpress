@@ -6,6 +6,7 @@ const state = {
   imageFiles: new Map(), // filename (lowercase) -> File
   categories: [],
   tags: [],
+  users: [],
   poster: { file: null, link: "" },
   lastBatchTag: localStorage.getItem("uas_last_batch_tag") || null,
   overviewPosts: [],
@@ -106,6 +107,7 @@ async function loadTaxonomies() {
     const data = await apiFetch("/wp-taxonomies");
     state.categories = data.categories || [];
     state.tags = data.tags || [];
+    state.users = data.users || [];
     const datalist = document.getElementById("tagList") || document.createElement("datalist");
     datalist.id = "tagList";
     datalist.innerHTML = state.tags.map((t) => `<option value="${t.name}">`).join("");
@@ -167,6 +169,8 @@ el("parseBtn").addEventListener("click", async () => {
       include: a.parseWarnings.length === 0,
       selectedCategoryIds: [],
       tagsText: "",
+      caption: "",
+      authorId: "",
       status: "venter",
     }));
     el("parseStatus").textContent = `Fant ${state.articles.length} sak(er).`;
@@ -214,6 +218,18 @@ function renderArticles() {
       <label>Alt-tekst på bilde</label>
       <input type="text" data-role="altText" value="${escapeAttr(article.altText)}" />
 
+      <label>Bildetekst (vises som WP sin "Bildetekst"/caption på bildet)</label>
+      <input type="text" data-role="caption" value="${escapeAttr(article.caption)}" placeholder="Trykk «Analyser med AI» for forslag, eller skriv selv" />
+
+      <label>Foto (fotokreditering, valgfritt)</label>
+      <input type="text" data-role="photoCredit" value="${escapeAttr(article.photoCredit)}" placeholder="f.eks. Ola Nordmann" />
+
+      <label>Byline (forfatter)</label>
+      <select data-role="authorId">
+        <option value="">– Behold standard forfatter –</option>
+        ${state.users.map((u) => `<option value="${u.id}" ${String(article.authorId) === String(u.id) ? "selected" : ""}>${escapeAttr(u.name)}</option>`).join("")}
+      </select>
+
       <label>Kategori</label>
       <div class="checkbox-row" data-role="categories">
         ${categoryCheckboxOptions()
@@ -249,6 +265,15 @@ function renderArticles() {
     wrapper.querySelector('[data-role="altText"]').addEventListener("input", (e) => {
       article.altText = e.target.value;
     });
+    wrapper.querySelector('[data-role="caption"]').addEventListener("input", (e) => {
+      article.caption = e.target.value;
+    });
+    wrapper.querySelector('[data-role="photoCredit"]').addEventListener("input", (e) => {
+      article.photoCredit = e.target.value;
+    });
+    wrapper.querySelector('[data-role="authorId"]').addEventListener("change", (e) => {
+      article.authorId = e.target.value;
+    });
     wrapper.querySelector('[data-role="tags"]').addEventListener("input", (e) => {
       article.tagsText = e.target.value;
     });
@@ -273,9 +298,17 @@ function renderArticles() {
         if (currentImg) fd.append("image", currentImg);
         const result = await apiFetch("/analyze-article", { method: "POST", body: fd });
         const matchBadgeClass = result.imageMatch === "god" ? "ok" : result.imageMatch === "dårlig" ? "error" : "warn";
+
+        if (result.suggestedCaption) {
+          article.caption = result.suggestedCaption;
+          const captionInput = wrapper.querySelector('[data-role="caption"]');
+          if (captionInput) captionInput.value = result.suggestedCaption;
+        }
+
         out.innerHTML = `
           <p><span class="badge ${matchBadgeClass}">Bilde: ${result.imageMatch || "ikke vurdert"}</span></p>
           ${(result.warnings || []).map((w) => `<span class="badge warn">${w}</span>`).join("")}
+          ${result.suggestedCaption ? `<p class="hint">Foreslått bildetekst er satt inn i feltet over - rediger fritt.</p>` : ""}
           <p class="hint">${result.comment || ""}</p>
         `;
       } catch (err) {
@@ -292,6 +325,15 @@ function renderArticles() {
 
 function escapeAttr(str) {
   return String(str || "").replace(/"/g, "&quot;");
+}
+
+// Kombinerer bildetekst-forslaget med fotokreditering til én tekst som lagres
+// i WordPress sitt native "Bildetekst" (caption)-felt på bildet.
+function buildCaption(article) {
+  const parts = [];
+  if (article.caption) parts.push(article.caption.trim());
+  if (article.photoCredit) parts.push(`Foto: ${article.photoCredit.trim()}.`);
+  return parts.join(" ");
 }
 
 // ---------- submit batch ----------
@@ -345,6 +387,7 @@ el("submitBatchBtn").addEventListener("click", async () => {
         const fd = new FormData();
         fd.append("image", imgFile);
         fd.append("altText", article.altText || "");
+        fd.append("caption", buildCaption(article));
         const uploaded = await apiFetch("/upload-image", { method: "POST", body: fd });
         featuredMediaId = uploaded.id;
         featuredMediaUrl = uploaded.url;
@@ -369,6 +412,7 @@ el("submitBatchBtn").addEventListener("click", async () => {
           featuredMediaUrl,
           status: "draft",
           poster: posterData,
+          authorId: article.authorId || undefined,
         }),
       });
 
