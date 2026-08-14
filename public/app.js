@@ -112,6 +112,14 @@ async function loadTaxonomies() {
     datalist.id = "tagList";
     datalist.innerHTML = state.tags.map((t) => `<option value="${t.name}">`).join("");
     document.body.appendChild(datalist);
+
+    // Fyll ut "sett for alle saker"-kontrollene
+    el("bulkAuthorId").innerHTML =
+      `<option value="">– Behold standard forfatter –</option>` +
+      state.users.map((u) => `<option value="${u.id}">${escapeAttr(u.name)}</option>`).join("");
+    el("bulkCategories").innerHTML = categoryCheckboxOptions()
+      .map((c) => `<label><input type="checkbox" value="${c.id}" /> ${escapeHtml(c.name)}</label>`)
+      .join("");
   } catch (err) {
     console.error("Klarte ikke hente kategorier/stikkord:", err.message);
   }
@@ -174,6 +182,7 @@ el("parseBtn").addEventListener("click", async () => {
       status: "venter",
     }));
     el("parseStatus").textContent = `Fant ${state.articles.length} sak(er).`;
+    el("bulkDefaultsSection").hidden = state.articles.length === 0;
     renderArticles();
   } catch (err) {
     el("parseStatus").textContent = `Feil: ${err.message}`;
@@ -235,13 +244,13 @@ function renderArticles() {
         ${categoryCheckboxOptions()
           .map(
             (c) =>
-              `<label><input type="checkbox" value="${c.id}" /> ${c.name}</label>`
+              `<label><input type="checkbox" value="${c.id}" ${article.selectedCategoryIds.includes(c.id) ? "checked" : ""} /> ${c.name}</label>`
           )
           .join("")}
       </div>
 
       <label>Stikkord (kommaseparert)</label>
-      <input type="text" data-role="tags" list="tagList" placeholder="f.eks. droner, regelverk" />
+      <input type="text" data-role="tags" list="tagList" value="${escapeAttr(article.tagsText)}" placeholder="f.eks. droner, regelverk" />
 
       <button data-role="analyze" type="button">Analyser med AI</button>
       <div data-role="analysis"></div>
@@ -326,6 +335,29 @@ function renderArticles() {
 function escapeAttr(str) {
   return String(str || "").replace(/"/g, "&quot;");
 }
+
+// ---------- sett samme verdier for alle saker ----------
+
+el("applyBulkDefaultsBtn").addEventListener("click", () => {
+  const authorId = el("bulkAuthorId").value;
+  const photoCredit = el("bulkPhotoCredit").value.trim();
+  const tagsText = el("bulkTags").value.trim();
+  const categoryIds = [...document.querySelectorAll("#bulkCategories input:checked")].map((c) => Number(c.value));
+
+  if (!authorId && !photoCredit && !tagsText && categoryIds.length === 0) {
+    alert("Fyll ut minst ett felt du vil sette på alle sakene først.");
+    return;
+  }
+
+  state.articles.forEach((article) => {
+    if (authorId) article.authorId = authorId;
+    if (photoCredit) article.photoCredit = photoCredit;
+    if (tagsText) article.tagsText = tagsText;
+    if (categoryIds.length) article.selectedCategoryIds = [...categoryIds];
+  });
+
+  renderArticles();
+});
 
 // Kombinerer bildetekst-forslaget med fotokreditering til én tekst som lagres
 // i WordPress sitt native "Bildetekst" (caption)-felt på bildet.

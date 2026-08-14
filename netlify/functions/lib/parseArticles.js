@@ -17,6 +17,14 @@ function escapeRegex(s) {
 
 const labelRegex = new RegExp(`^(${LABELS.map(escapeRegex).join("|")}):[ \\t]*`, "gm");
 
+// Mammoth setter alltid \n\n mellom HVER Word-avsnitt, også når kilde-dokumentet
+// allerede har en tom linje mellom avsnitt (dobbel Enter) - da blir det \n\n\n\n,
+// som vises som 2-3 tomme linjer i redigeringsfeltet. Normaliserer til nøyaktig
+// én tom linje (\n\n) mellom avsnitt, uansett hvor mange linjeskift kilden hadde.
+function normalizeBlankLines(text) {
+  return text.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 function parseBlock(block, index) {
   const matches = [...block.matchAll(labelRegex)];
   const fields = {};
@@ -24,7 +32,7 @@ function parseBlock(block, index) {
     const label = matches[i][1];
     const start = matches[i].index + matches[i][0].length;
     const end = i + 1 < matches.length ? matches[i + 1].index : block.length;
-    fields[label] = block.slice(start, end).trim();
+    fields[label] = normalizeBlankLines(block.slice(start, end));
   }
 
   const title = fields["TITTEL"] || "";

@@ -48,8 +48,22 @@
           <p id="parseStatus" class="hint"></p>
         </section>
 
+        <section class="card" id="bulkDefaultsSection" hidden>
+          <h2>2. Sett samme verdier for alle saker (valgfritt)</h2>
+          <p class="hint">Fyll ut det som skal være likt for hele batchen og trykk «Bruk på alle saker». Du kan fortsatt overstyre enkeltsaker etterpå.</p>
+          <label for="bulkAuthorId">Byline (forfatter)</label>
+          <select id="bulkAuthorId"></select>
+          <label for="bulkPhotoCredit">Foto (fotokreditering)</label>
+          <input type="text" id="bulkPhotoCredit" placeholder="f.eks. Ola Nordmann" />
+          <label>Kategori</label>
+          <div class="checkbox-row" id="bulkCategories"></div>
+          <label for="bulkTags">Stikkord (kommaseparert)</label>
+          <input type="text" id="bulkTags" list="tagList" placeholder="f.eks. droner, regelverk" />
+          <button id="applyBulkDefaultsBtn" type="button">Bruk på alle saker</button>
+        </section>
+
         <section class="card">
-          <h2>2. Konferanseplakat (valgfritt, legges nederst i alle saker)</h2>
+          <h2>3. Konferanseplakat (valgfritt, legges nederst i alle saker)</h2>
           <label for="posterImageInput">Plakatbilde</label>
           <input type="file" id="posterImageInput" accept="image/*" />
           <label for="posterLinkInput">Lenke til arrangementet</label>
@@ -58,13 +72,13 @@
         </section>
 
         <section class="card" id="articlesSection" hidden>
-          <h2>3. Gjennomgå sakene (<span id="articleCount">0</span>)</h2>
+          <h2>4. Gjennomgå sakene (<span id="articleCount">0</span>)</h2>
           <div id="articlesList"></div>
           <button id="submitBatchBtn" class="primary">Send inn batch som utkast</button>
         </section>
 
         <section class="card" id="resultsSection" hidden>
-          <h2>4. Resultat</h2>
+          <h2>5. Resultat</h2>
           <p class="hint" id="batchTagHint"></p>
           <table id="resultsTable">
             <thead><tr><th>Sak</th><th>Status</th><th>Lenke</th></tr></thead>
