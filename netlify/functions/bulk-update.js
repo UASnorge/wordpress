@@ -1,5 +1,23 @@
 const { isAuthorized, unauthorizedResponse } = require("./lib/auth");
-const { resolveTagIds, getPostTagIds, updatePostStatus, updatePostTags, trashPost } = require("./lib/wp");
+const {
+  resolveTagIds,
+  getPostTagIds,
+  getPostCategoryIds,
+  updatePostStatus,
+  updatePostTags,
+  updatePostCategories,
+  trashPost,
+} = require("./lib/wp");
+
+const VALID_ACTIONS = [
+  "publish",
+  "draft",
+  "trash",
+  "add_tags",
+  "replace_tags",
+  "add_categories",
+  "replace_categories",
+];
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -14,11 +32,11 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "Ugyldig forespørsel." }) };
   }
 
-  const { ids = [], action, tagNames = [] } = data;
+  const { ids = [], action, tagNames = [], categoryIds = [] } = data;
   if (!Array.isArray(ids) || ids.length === 0) {
     return { statusCode: 400, body: JSON.stringify({ error: "Ingen saker valgt." }) };
   }
-  if (!["publish", "draft", "add_tags", "replace_tags", "trash"].includes(action)) {
+  if (!VALID_ACTIONS.includes(action)) {
     return { statusCode: 400, body: JSON.stringify({ error: "Ukjent handling." }) };
   }
 
@@ -38,6 +56,12 @@ exports.handler = async (event) => {
         const existing = await getPostTagIds(id);
         const merged = [...new Set([...existing, ...newTagIds])];
         await updatePostTags(id, merged);
+      } else if (action === "replace_categories") {
+        await updatePostCategories(id, categoryIds.map(Number));
+      } else if (action === "add_categories") {
+        const existing = await getPostCategoryIds(id);
+        const merged = [...new Set([...existing, ...categoryIds.map(Number)])];
+        await updatePostCategories(id, merged);
       }
       results.push({ id, ok: true });
     } catch (err) {

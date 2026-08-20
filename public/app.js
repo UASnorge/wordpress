@@ -148,10 +148,12 @@ async function loadTaxonomies() {
     datalist.innerHTML = state.tags.map((t) => `<option value="${t.name}">`).join("");
     document.body.appendChild(datalist);
 
-    // Fyll ut "sett for alle saker"-kontrollene
-    el("bulkCategories").innerHTML = categoryCheckboxOptions()
+    // Fyll ut "sett for alle saker"-kontrollene (Ny batch) og bulk-kategori (Oversikt)
+    const categoryCheckboxesHtml = categoryCheckboxOptions()
       .map((c) => `<label><input type="checkbox" value="${c.id}" /> ${escapeHtml(c.name)}</label>`)
       .join("");
+    el("bulkCategories").innerHTML = categoryCheckboxesHtml;
+    el("overviewBulkCategories").innerHTML = categoryCheckboxesHtml;
   } catch (err) {
     console.error("Klarte ikke hente kategorier/stikkord:", err.message);
   }
@@ -651,6 +653,23 @@ el("bulkReplaceTagsBtn").addEventListener("click", () => {
   const tagNames = (el("bulkTagsInput").value || "").split(",").map((t) => t.trim()).filter(Boolean);
   if (!confirm(`Dette ERSTATTER alle eksisterende stikkord på ${state.selectedIds.size} sak(er). Fortsette?`)) return;
   runBulkAction("replace_tags", { tagNames });
+});
+
+function getOverviewBulkCategoryIds() {
+  return [...document.querySelectorAll("#overviewBulkCategories input:checked")].map((c) => Number(c.value));
+}
+
+el("bulkAddCategoriesBtn").addEventListener("click", () => {
+  const categoryIds = getOverviewBulkCategoryIds();
+  if (!categoryIds.length) return alert("Huk av minst én kategori.");
+  runBulkAction("add_categories", { categoryIds });
+});
+
+el("bulkReplaceCategoriesBtn").addEventListener("click", () => {
+  const categoryIds = getOverviewBulkCategoryIds();
+  if (!categoryIds.length) return alert("Huk av minst én kategori.");
+  if (!confirm(`Dette ERSTATTER alle eksisterende kategorier på ${state.selectedIds.size} sak(er). Fortsette?`)) return;
+  runBulkAction("replace_categories", { categoryIds });
 });
 
 el("copyLinksBtn").addEventListener("click", async () => {

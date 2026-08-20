@@ -170,6 +170,19 @@ async function getPostTagIds(postId) {
   return post.tags || [];
 }
 
+async function getPostCategoryIds(postId) {
+  const post = await wpFetch(`/wp/v2/posts/${postId}?_fields=categories`);
+  return post.categories || [];
+}
+
+async function updatePostCategories(postId, categoryIds) {
+  return wpFetch(`/wp/v2/posts/${postId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ categories: categoryIds }),
+  });
+}
+
 async function updatePostStatus(postId, status) {
   return wpFetch(`/wp/v2/posts/${postId}`, {
     method: "POST",
@@ -199,7 +212,9 @@ module.exports = {
   createPost,
   listPosts,
   getPostTagIds,
+  getPostCategoryIds,
   updatePostStatus,
   updatePostTags,
+  updatePostCategories,
   trashPost,
 };
