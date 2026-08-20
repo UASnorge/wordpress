@@ -6,7 +6,6 @@ const state = {
   imageFiles: new Map(), // filename (lowercase) -> File
   categories: [],
   tags: [],
-  users: [],
   poster: { file: null, link: "" },
   lastBatchTag: localStorage.getItem("uas_last_batch_tag") || null,
   overviewPosts: [],
@@ -107,16 +106,12 @@ async function loadTaxonomies() {
     const data = await apiFetch("/wp-taxonomies");
     state.categories = data.categories || [];
     state.tags = data.tags || [];
-    state.users = data.users || [];
     const datalist = document.getElementById("tagList") || document.createElement("datalist");
     datalist.id = "tagList";
     datalist.innerHTML = state.tags.map((t) => `<option value="${t.name}">`).join("");
     document.body.appendChild(datalist);
 
     // Fyll ut "sett for alle saker"-kontrollene
-    el("bulkAuthorId").innerHTML =
-      `<option value="">– Behold standard forfatter –</option>` +
-      state.users.map((u) => `<option value="${u.id}">${escapeAttr(u.name)}</option>`).join("");
     el("bulkCategories").innerHTML = categoryCheckboxOptions()
       .map((c) => `<label><input type="checkbox" value="${c.id}" /> ${escapeHtml(c.name)}</label>`)
       .join("");
@@ -178,7 +173,7 @@ el("parseBtn").addEventListener("click", async () => {
       selectedCategoryIds: [],
       tagsText: "",
       caption: "",
-      authorId: "",
+      byline: "",
       status: "venter",
     }));
     el("parseStatus").textContent = `Fant ${state.articles.length} sak(er).`;
@@ -233,11 +228,8 @@ function renderArticles() {
       <label>Foto (fotokreditering, valgfritt)</label>
       <input type="text" data-role="photoCredit" value="${escapeAttr(article.photoCredit)}" placeholder="f.eks. Ola Nordmann" />
 
-      <label>Byline (forfatter)</label>
-      <select data-role="authorId">
-        <option value="">– Behold standard forfatter –</option>
-        ${state.users.map((u) => `<option value="${u.id}" ${String(article.authorId) === String(u.id) ? "selected" : ""}>${escapeAttr(u.name)}</option>`).join("")}
-      </select>
+      <label>Byline</label>
+      <input type="text" data-role="byline" value="${escapeAttr(article.byline)}" placeholder="f.eks. Skrevet av UAS Norge" />
 
       <label>Kategori</label>
       <div class="checkbox-row" data-role="categories">
@@ -280,8 +272,8 @@ function renderArticles() {
     wrapper.querySelector('[data-role="photoCredit"]').addEventListener("input", (e) => {
       article.photoCredit = e.target.value;
     });
-    wrapper.querySelector('[data-role="authorId"]').addEventListener("change", (e) => {
-      article.authorId = e.target.value;
+    wrapper.querySelector('[data-role="byline"]').addEventListener("input", (e) => {
+      article.byline = e.target.value;
     });
     wrapper.querySelector('[data-role="tags"]').addEventListener("input", (e) => {
       article.tagsText = e.target.value;
@@ -339,18 +331,18 @@ function escapeAttr(str) {
 // ---------- sett samme verdier for alle saker ----------
 
 el("applyBulkDefaultsBtn").addEventListener("click", () => {
-  const authorId = el("bulkAuthorId").value;
+  const byline = el("bulkByline").value.trim();
   const photoCredit = el("bulkPhotoCredit").value.trim();
   const tagsText = el("bulkTags").value.trim();
   const categoryIds = [...document.querySelectorAll("#bulkCategories input:checked")].map((c) => Number(c.value));
 
-  if (!authorId && !photoCredit && !tagsText && categoryIds.length === 0) {
+  if (!byline && !photoCredit && !tagsText && categoryIds.length === 0) {
     alert("Fyll ut minst ett felt du vil sette på alle sakene først.");
     return;
   }
 
   state.articles.forEach((article) => {
-    if (authorId) article.authorId = authorId;
+    if (byline) article.byline = byline;
     if (photoCredit) article.photoCredit = photoCredit;
     if (tagsText) article.tagsText = tagsText;
     if (categoryIds.length) article.selectedCategoryIds = [...categoryIds];
@@ -359,14 +351,6 @@ el("applyBulkDefaultsBtn").addEventListener("click", () => {
   renderArticles();
 });
 
-// Kombinerer bildetekst-forslaget med fotokreditering til én tekst som lagres
-// i WordPress sitt native "Bildetekst" (caption)-felt på bildet.
-function buildCaption(article) {
-  const parts = [];
-  if (article.caption) parts.push(article.caption.trim());
-  if (article.photoCredit) parts.push(`Foto: ${article.photoCredit.trim()}.`);
-  return parts.join(" ");
-}
 
 // ---------- submit batch ----------
 
@@ -419,7 +403,6 @@ el("submitBatchBtn").addEventListener("click", async () => {
         const fd = new FormData();
         fd.append("image", imgFile);
         fd.append("altText", article.altText || "");
-        fd.append("caption", buildCaption(article));
         const uploaded = await apiFetch("/upload-image", { method: "POST", body: fd });
         featuredMediaId = uploaded.id;
         featuredMediaUrl = uploaded.url;
@@ -444,7 +427,9 @@ el("submitBatchBtn").addEventListener("click", async () => {
           featuredMediaUrl,
           status: "draft",
           poster: posterData,
-          authorId: article.authorId || undefined,
+          byline: article.byline || undefined,
+          caption: article.caption || undefined,
+          photoCredit: article.photoCredit || undefined,
         }),
       });
 
