@@ -4,6 +4,8 @@ const state = {
   token: localStorage.getItem("uas_token") || null,
   articles: [],
   imageFiles: new Map(), // filename (lowercase) -> File
+  embeddedImages: [], // [{index, mimeType, dataUrl}] fra bilder limt inn i .docx-en
+  embeddedImageBlobCache: new Map(), // index -> Blob (lazy)
   categories: [],
   tags: [],
   poster: { file: null, link: "" },
@@ -44,6 +46,41 @@ function logout() {
 function findImageFile(filename) {
   if (!filename) return null;
   return state.imageFiles.get(filename.trim().toLowerCase()) || null;
+}
+
+function dataUrlToBlob(dataUrl) {
+  const [header, base64] = dataUrl.split(",");
+  const mime = (header.match(/data:(.*?);base64/) || [])[1] || "application/octet-stream";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+// Henter en File/Blob for et innebygd bilde (fra bilder limt inn i .docx-en), gitt
+// dokument-indeksen returnert av /parse-docx. Cacher konverteringen fra data-URL.
+function getEmbeddedImageBlob(index) {
+  if (index === null || index === undefined) return null;
+  if (state.embeddedImageBlobCache.has(index)) return state.embeddedImageBlobCache.get(index);
+  const entry = state.embeddedImages.find((img) => img.index === index);
+  if (!entry) return null;
+  const blob = dataUrlToBlob(entry.dataUrl);
+  const ext = (entry.mimeType.split("/")[1] || "png").replace("jpeg", "jpg");
+  blob.name = `innebygd-bilde-${index}.${ext}`; // File-lignende, brukes som filnavn ved opplasting
+  state.embeddedImageBlobCache.set(index, blob);
+  return blob;
+}
+
+// Finner hovedbildet for en sak: innebygd bilde har prioritet, ellers ekstern fil.
+function findHeroImage(article) {
+  if (article.heroImageIndex !== null && article.heroImageIndex !== undefined) {
+    return getEmbeddedImageBlob(article.heroImageIndex);
+  }
+  return findImageFile(article.imageFilename);
+}
+
+function blobPreviewUrl(blob) {
+  return blob instanceof Blob ? URL.createObjectURL(blob) : null;
 }
 
 function escapeHtml(str) {
@@ -163,10 +200,15 @@ el("parseBtn").addEventListener("click", async () => {
     const fd = new FormData();
     fd.append("docx", file);
     const data = await apiFetch("/parse-docx", { method: "POST", body: fd });
-    if (data.warning) {
-      el("parseStatus").textContent = data.warning;
+
+    if (!data.articles || data.articles.length === 0) {
+      el("parseStatus").textContent = data.warning || "Fant ingen saker.";
       return;
     }
+
+    state.embeddedImages = data.images || [];
+    state.embeddedImageBlobCache.clear();
+
     state.articles = data.articles.map((a) => ({
       ...a,
       include: a.parseWarnings.length === 0,
@@ -176,7 +218,12 @@ el("parseBtn").addEventListener("click", async () => {
       byline: "",
       status: "venter",
     }));
-    el("parseStatus").textContent = `Fant ${state.articles.length} sak(er).`;
+
+    const embeddedCount = state.embeddedImages.length;
+    el("parseStatus").textContent =
+      `Fant ${state.articles.length} sak(er)` +
+      (embeddedCount ? `, ${embeddedCount} innebygd(e) bilde(r) funnet.` : ".") +
+      (data.warning ? ` ⚠ ${data.warning}` : "");
     el("bulkDefaultsSection").hidden = state.articles.length === 0;
     renderArticles();
   } catch (err) {
@@ -194,7 +241,9 @@ function renderArticles() {
   el("articleCount").textContent = String(state.articles.length);
 
   state.articles.forEach((article, idx) => {
-    const imgFile = findImageFile(article.imageFilename);
+    const heroImg = findHeroImage(article);
+    const isEmbeddedHero = article.heroImageIndex !== null && article.heroImageIndex !== undefined;
+    const inlineCount = (article.inlineImageIndexes || []).length;
     const wrapper = document.createElement("details");
     wrapper.className = "article-card";
     wrapper.open = idx === 0;
@@ -211,13 +260,14 @@ function renderArticles() {
       <input type="text" data-role="title" value="${escapeAttr(article.title)}" />
 
       <label>Ingress</label>
-      <textarea data-role="ingress">${article.ingress}</textarea>
+      <textarea data-role="ingress">${escapeHtml(article.ingress)}</textarea>
 
       <label>Hovedtekst</label>
-      <textarea data-role="body" style="min-height:8rem">${article.body}</textarea>
+      <textarea data-role="body" style="min-height:8rem">${escapeHtml(article.body)}</textarea>
 
-      <label>Bilde (${article.imageFilename || "ingen fil angitt"})</label>
-      ${imgFile ? `<img class="preview" src="${URL.createObjectURL(imgFile)}" />` : `<span class="badge error">Bilde ikke funnet blant opplastede filer</span>`}
+      <label>Hovedbilde ${isEmbeddedHero ? "(innebygd i dokumentet)" : `(${article.imageFilename || "ingen fil angitt"})`}</label>
+      ${heroImg ? `<img class="preview" src="${blobPreviewUrl(heroImg)}" />` : `<span class="badge error">Bilde ikke funnet - hverken innebygd eller blant opplastede filer</span>`}
+      ${inlineCount ? `<p class="hint">+ ${inlineCount} bilde(r) satt inn i hovedteksten (se markørene [[BILDE:n]] i teksten under - du kan flytte/slette linjen for å endre plassering).</p>` : ""}
 
       <label>Alt-tekst på bilde</label>
       <input type="text" data-role="altText" value="${escapeAttr(article.altText)}" />
@@ -295,7 +345,7 @@ function renderArticles() {
         fd.append("title", article.title);
         fd.append("ingress", article.ingress);
         fd.append("body", article.body);
-        const currentImg = findImageFile(article.imageFilename);
+        const currentImg = findHeroImage(article);
         if (currentImg) fd.append("image", currentImg);
         const result = await apiFetch("/analyze-article", { method: "POST", body: fd });
         const matchBadgeClass = result.imageMatch === "god" ? "ok" : result.imageMatch === "dårlig" ? "error" : "warn";
@@ -398,14 +448,29 @@ el("submitBatchBtn").addEventListener("click", async () => {
 
     try {
       let featuredMediaId, featuredMediaUrl;
-      const imgFile = findImageFile(article.imageFilename);
-      if (imgFile) {
+      const heroImg = findHeroImage(article);
+      if (heroImg) {
         const fd = new FormData();
-        fd.append("image", imgFile);
+        fd.append("image", heroImg, heroImg.name || undefined);
         fd.append("altText", article.altText || "");
         const uploaded = await apiFetch("/upload-image", { method: "POST", body: fd });
         featuredMediaId = uploaded.id;
         featuredMediaUrl = uploaded.url;
+      }
+
+      // Erstatt [[BILDE:n]]-markører (bilder limt inn i teksten) med ekte <img>-tagger,
+      // etter at hvert av dem er lastet opp til WordPress sitt mediebibliotek.
+      let finalBody = article.body;
+      const markerIndexes = [...new Set([...finalBody.matchAll(/\[\[BILDE:(\d+)\]\]/g)].map((m) => Number(m[1])))];
+      for (const idx of markerIndexes) {
+        const blob = getEmbeddedImageBlob(idx);
+        if (!blob) continue;
+        const fd = new FormData();
+        fd.append("image", blob, blob.name);
+        fd.append("altText", "");
+        const uploaded = await apiFetch("/upload-image", { method: "POST", body: fd });
+        const imgTag = `<img src="${uploaded.url}" alt="" style="max-width:100%;height:auto;" />`;
+        finalBody = finalBody.split(`[[BILDE:${idx}]]`).join(imgTag);
       }
 
       const tagNames = (article.tagsText || "")
@@ -420,7 +485,7 @@ el("submitBatchBtn").addEventListener("click", async () => {
         body: JSON.stringify({
           title: article.title,
           ingress: article.ingress,
-          body: article.body,
+          body: finalBody,
           categoryIds: article.selectedCategoryIds,
           tagNames,
           featuredMediaId,

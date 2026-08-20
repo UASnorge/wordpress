@@ -9,6 +9,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",
     "busboy": "^1.6.0",
+    "jszip": "^3.10.1",
     "mammoth": "^1.8.0"
   }
 }

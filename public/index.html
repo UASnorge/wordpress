@@ -34,15 +34,20 @@
       <!-- TAB: NY BATCH -->
       <section id="batchTab" class="tabPanel">
         <section class="card">
-          <h2>1. Last opp Word-dokument og bilder</h2>
+          <h2>1. Last opp Word-dokument</h2>
           <p class="hint">
             Word-dokumentet må bruke faste overskrifter (TITTEL, INGRESS, HOVEDTEKST, BILDE, ALT-TEKST BILDE)
-            og <code>===</code> som skille mellom saker. Velg alle bildefilene sakene refererer til. Det er
-            ingen grense på antall saker i ett dokument.
+            og <code>===</code> som skille mellom saker. Det er ingen grense på antall saker i ett dokument.
+          </p>
+          <p class="hint">
+            <strong>Bilder kan limes rett inn i dokumentet</strong> (enklest) - første bilde i en sak blir
+            hovedbilde, eventuelle flere bilder settes inn i brødteksten der du plasserte dem. Fungerer best
+            for mindre dokumenter (grovt sagt under ~5 MB bilder totalt). For store batcher med mange/store
+            bilder, last dem heller opp som egne filer under og referer til dem med <code>BILDE: filnavn.jpg</code>.
           </p>
           <label for="docxInput">Word-dokument (.docx)</label>
           <input type="file" id="docxInput" accept=".docx" />
-          <label for="imagesInput">Bilder (velg flere)</label>
+          <label for="imagesInput">Bilder som egne filer (valgfritt, kun hvis du ikke limte bilder inn i dokumentet)</label>
           <input type="file" id="imagesInput" accept="image/*" multiple />
           <button id="parseBtn">Tolk dokument</button>
           <p id="parseStatus" class="hint"></p>

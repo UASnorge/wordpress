@@ -30,15 +30,28 @@ TITTEL: Neste sak...
 ...
 ```
 
-Last opp bildene som egne filer sammen med dokumentet (ikke limt inn i Word) —
-filnavnet i `BILDE:`-feltet må stemme med det opplastede bildets filnavn.
+**Bilder kan limes rett inn i dokumentet** (anbefalt, enklest) — det første
+bildet i en sak blir automatisk hovedbilde, og eventuelle flere bilder settes
+inn nøyaktig der de er plassert i teksten. `BILDE:`-feltet trengs da ikke.
+Fungerer best for moderate dokumentstørrelser (grovt sagt under ~5 MB bilder
+totalt per opplasting) — Netlify Functions har en ca. 6 MB grense per
+forespørsel/svar, som ikke er justerbar (verken via betalt plan eller på annet
+vis). Se `MAX_EMBEDDED_IMAGE_BYTES` i `parse-docx.js`.
+
+**Alternativt**, for store batcher (mange/store bilder, som ikke passer under
+grensen over): last opp bildene som egne filer sammen med dokumentet, og
+referer til dem med `BILDE: filnavn.jpg` — filnavnet må stemme med det
+opplastede bildets filnavn. Ingen størrelsesgrense her, siden hvert bilde da
+lastes opp i et eget, lite kall.
 
 `FOTO:` er valgfritt (fotokreditering, vises som «Foto: Navn» sammen med
 bildeteksten) og kan også settes/endres i appen.
 
-Kategori, stikkord og byline (forfatter) velges i appen, ikke i dokumentet.
-Bildetekst (WordPress sin native "Bildetekst"/caption på bildet) kan skrives
-manuelt i appen, eller genereres med "Analyser med AI" ut fra selve bildet.
+Kategori, stikkord og byline velges i appen, ikke i dokumentet — byline er et
+fritekstfelt (matcher ACF-feltet `byline` på uasnorway.no, ikke et valg blant
+WordPress-brukere). Bildetekst (WordPress sin native "Bildetekst"/caption på
+bildet) kan skrives manuelt i appen, eller genereres med "Analyser med AI" ut
+fra selve bildet.
 
 ## Miljøvariabler (settes i Netlify → Site settings → Environment variables)
 
@@ -72,6 +85,30 @@ Dette dekker kravet uten behov for noen ekstra plugin. De direkte
 og bekreftet ignorert av WP), men trengs altså ikke siden fallback-verdiene
 allerede blir riktige.
 
+## ACF-felt (den faktiske redaksjonelle visningen)
+
+uasnorway.no bruker Advanced Custom Fields for selve visningen av saker —
+helt separat fra WPs native `content`/`excerpt`/`featured_media`, som fortsatt
+settes i tillegg (for Yoast-fallback og andre systemer). Feltnavnene ble
+funnet 18.08.2026 via DevTools-inspeksjon i wp-admin sammen med brukeren:
+
+| Visningsnavn i WP-admin | ACF-feltnavn | Type |
+|---|---|---|
+| Bilde | `image` | image (attachment-ID som streng) |
+| Bildetekst | `imageTxt` | text |
+| Foto | `photoCredits` | text |
+| Byline | `byline` | text (fritekst) |
+| Ingress | `excerpt` | textarea |
+| Innhold | `content` | wysiwyg |
+
+Disse var IKKE skrivbare via REST i utgangspunktet. Løst med en liten
+mu-plugin (`uas-batch-rest-fields`, se `docs/`-mappen om den ligger der, ev.
+be brukeren om filen) som registrerer feltene + deres ACF-referanserader
+(`_feltnavn` → feltnøkkel, f.eks. `_image` → `field_58ac635e3fd79`) for REST.
+Feltnøklene er hardkodet i `create-post.js` (`ACF_FIELD_KEYS`) — disse er
+spesifikke for uasnorway.no sin feltgruppe og vil ikke stemme på et annet
+WordPress-nettsted uten å oppdateres.
+
 ## Deploy
 
 1. Opprett et nytt (privat) GitHub-repo og push dette prosjektet dit.
@@ -84,14 +121,15 @@ allerede blir riktige.
 
 ### Ny batch
 1. Åpne appen, logg inn med `APP_ACCESS_PASSWORD`.
-2. Last opp Word-dokumentet og alle tilhørende bilder.
+2. Last opp Word-dokumentet — med bilder limt rett inn (enklest), eller separate
+   bildefiler ved siden av for større batcher (se Word-mal-avsnittet over).
 3. Trykk "Tolk dokument" — sakene vises som kort du kan redigere. Ingen grense på
    antall saker (testet med batcher godt over 20).
 4. Sett ev. konferanseplakat + lenke (gjelder for hele batchen).
-5. For hver sak: sjekk/rediger tekst, huk av kategori, skriv stikkord, velg
-   byline (forfatter) fra listen over WordPress-brukere, sett evt. fotokreditering,
-   og trykk "Analyser med AI" for en kvalitetssjekk som også foreslår en
-   bildetekst (WP sin native "Bildetekst"/caption på bildet) ut fra selve bildet.
+5. For hver sak: sjekk/rediger tekst, huk av kategori, skriv stikkord, skriv
+   byline og evt. fotokreditering, og trykk "Analyser med AI" for en
+   kvalitetssjekk som også foreslår en bildetekst (WP sin native
+   "Bildetekst"/caption på bildet) ut fra selve bildet.
 6. Trykk "Send inn batch som utkast" — alle saker opprettes som **utkast** i
    WordPress, og merkes automatisk med et skjult stikkord (`batch-ÅÅÅÅMMDD-TTMM`)
    slik at de er lette å finne igjen samlet i Oversikt-fanen.

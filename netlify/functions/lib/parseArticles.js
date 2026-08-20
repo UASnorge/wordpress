@@ -63,6 +63,98 @@ function parseArticles(rawText) {
   return blocks.map(parseBlock);
 }
 
+const SINGLE_LINE_FIELDS = ["TITTEL", "INGRESS", "BILDE", "ALT-TEKST BILDE", "FOTO"];
+const labelLineRegex = new RegExp(`^(${LABELS.map(escapeRegex).join("|")}):[ \\t]*(.*)$`);
+
+// Tolker saker fra en STRUKTURERT avsnittsliste (fra docxStructure.js), der bilder
+// er innebygd direkte i Word-dokumentet i stedet for opplastet som egne filer.
+//
+// Konvensjon: det FØRSTE bildet i en sak blir hovedbildet (som BILDE:-feltet i
+// tekstformatet). Eventuelle FLERE bilder i samme sak settes inn i brødteksten,
+// på nøyaktig det stedet de dukker opp, som en markør ([[BILDE:n]]) - erstattes
+// med en ekte <img>-tag når bildet er lastet opp til WordPress (se app.js).
+function parseArticlesFromStructured(paragraphs) {
+  const articles = [];
+  let current = null;
+  let currentField = null;
+
+  function startArticle() {
+    current = { fields: {}, bodyLines: [], heroImage: null, inlineImages: [] };
+    currentField = null;
+  }
+
+  function assignImage(idx) {
+    if (!current) return;
+    if (current.heroImage === null) {
+      current.heroImage = idx;
+    } else {
+      current.inlineImages.push(idx);
+      current.bodyLines.push(`[[BILDE:${idx}]]`);
+    }
+  }
+
+  function finish() {
+    if (!current) return;
+    const title = (current.fields.TITTEL || "").trim();
+    const body = normalizeBlankLines(current.bodyLines.join("\n\n"));
+    const warnings = [];
+    if (!title) warnings.push("Mangler tittel");
+    if (!current.fields.INGRESS) warnings.push("Mangler ingress");
+    if (!body) warnings.push("Mangler hovedtekst");
+    if (current.heroImage === null && !current.fields.BILDE) {
+      warnings.push("Mangler bilde (verken innebygd bilde eller BILDE:-filnavn funnet)");
+    }
+
+    articles.push({
+      id: `sak-${articles.length + 1}`,
+      title,
+      ingress: (current.fields.INGRESS || "").trim(),
+      body,
+      imageFilename: (current.fields.BILDE || "").trim(),
+      altText: (current.fields["ALT-TEKST BILDE"] || "").trim(),
+      photoCredit: (current.fields.FOTO || "").trim(),
+      heroImageIndex: current.heroImage,
+      inlineImageIndexes: current.inlineImages,
+      parseWarnings: warnings,
+    });
+  }
+
+  for (const para of paragraphs) {
+    const text = para.text;
+
+    if (/^=+$/.test(text) && text.length >= 3) {
+      finish();
+      current = null;
+      currentField = null;
+      continue;
+    }
+
+    const labelMatch = text.match(labelLineRegex);
+    if (labelMatch) {
+      if (!current) startArticle();
+      const label = labelMatch[1];
+      current.fields[label] = labelMatch[2] || "";
+      currentField = label;
+      para.imageIndexes.forEach(assignImage);
+      continue;
+    }
+
+    if (!current) continue; // tekst før første TITTEL: ignoreres (forklaringer, overskrifter osv.)
+
+    if (currentField && SINGLE_LINE_FIELDS.includes(currentField)) {
+      // Ekstra tekst rett under et enkeltlinje-felt uten ny label - slå sammen (sjeldent tilfelle)
+      if (text) current.fields[currentField] = `${current.fields[currentField] || ""} ${text}`.trim();
+    } else if (currentField === "HOVEDTEKST") {
+      if (text) current.bodyLines.push(text);
+    }
+
+    para.imageIndexes.forEach(assignImage);
+  }
+  finish();
+
+  return articles;
+}
+
 function bodyTextToHtml(text) {
   return text
     .split(/\n\s*\n/)
@@ -72,4 +164,4 @@ function bodyTextToHtml(text) {
     .join("\n");
 }
 
-module.exports = { parseArticles, bodyTextToHtml };
+module.exports = { parseArticles, parseArticlesFromStructured, bodyTextToHtml };
