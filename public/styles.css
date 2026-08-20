@@ -162,6 +162,18 @@ th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(
   border-radius: 6px; padding: 0.3rem 0.6rem; cursor: pointer;
 }
 
+.template-download {
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+  background: #eef3f1; border: 1px solid var(--primary); border-radius: 8px;
+  padding: 0.75rem 1rem; margin: 0.75rem 0 1rem;
+}
+.template-download-btn {
+  display: inline-block; background: var(--primary); color: white;
+  padding: 0.5rem 0.9rem; border-radius: 6px; text-decoration: none;
+  font-weight: 600; font-size: 0.9rem; white-space: nowrap;
+}
+.template-download-btn:hover { background: var(--primary-hover); }
+
 /* Floating chat widget (chatbot-style) */
 .chat-fab {
   position: fixed;
