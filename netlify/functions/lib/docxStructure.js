@@ -62,6 +62,9 @@ async function extractDocxStructure(buffer) {
     const textPieces = [...paraXml.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g)].map((m) => decodeXmlEntities(m[1]));
     const text = textPieces.join("").trim();
 
+    const styleMatch = paraXml.match(/<w:pStyle w:val="([^"]+)"/);
+    const style = styleMatch ? styleMatch[1] : null;
+
     const imageIndexes = [];
     const embedRegex = /r:embed="(rId\d+)"/g;
     let embedMatch;
