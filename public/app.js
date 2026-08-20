@@ -222,9 +222,14 @@ el("parseBtn").addEventListener("click", async () => {
     }));
 
     const embeddedCount = state.embeddedImages.length;
+    const aiNote =
+      data.parseMode === "ai-assisted"
+        ? " 🤖 Dokumentet fulgte ikke malen - AI tolket strukturen automatisk. Sjekk hver sak ekstra nøye før du sender inn."
+        : "";
     el("parseStatus").textContent =
       `Fant ${state.articles.length} sak(er)` +
       (embeddedCount ? `, ${embeddedCount} innebygd(e) bilde(r) funnet.` : ".") +
+      aiNote +
       (data.warning ? ` ⚠ ${data.warning}` : "");
     el("bulkDefaultsSection").hidden = state.articles.length === 0;
     renderArticles();
@@ -250,12 +255,14 @@ function renderArticles() {
     wrapper.className = "article-card";
     wrapper.open = idx === 0;
 
+    const aiBadge = article.aiAssisted ? `<span class="badge ai">🤖 AI-tolket</span>` : "";
     const warningBadges = article.parseWarnings
+      .filter((w) => w !== "AI-tolket - sjekk feltene nøye før innsending") // vist som eget merke over i stedet
       .map((w) => `<span class="badge warn">${w}</span>`)
       .join("");
 
     wrapper.innerHTML = `
-      <summary>${article.title || "(uten tittel)"} ${warningBadges}</summary>
+      <summary>${article.title || "(uten tittel)"} ${aiBadge} ${warningBadges}</summary>
       <label><input type="checkbox" data-role="include" ${article.include ? "checked" : ""}/> Inkluder i sending</label>
 
       <label>Tittel</label>

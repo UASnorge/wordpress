@@ -105,6 +105,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .badge.warn { background: #fff1d6; color: var(--warn); }
 .badge.ok { background: #e3f5ea; color: var(--ok); }
 .badge.error { background: #fde3e1; color: var(--error); }
+.badge.ai { background: #e8e3f5; color: #5b3e8c; }
 
 table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
 th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; vertical-align: middle; }

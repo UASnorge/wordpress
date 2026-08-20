@@ -32,8 +32,10 @@ function decodeXmlEntities(s) {
 }
 
 // Returnerer { paragraphs, images }
-// paragraphs: [{ text, imageIndexes: [n, ...] }]  (i dokumentrekkefølge)
-// images: [{ filename, mimeType, buffer }]        (i dokumentrekkefølge)
+// paragraphs: [{ text, style, imageIndexes: [n, ...] }]  (i dokumentrekkefølge)
+//   style = Words avsnittsstil (f.eks. "Heading1", "Heading2") eller null.
+//   Brukes av AI-fallback-tolkningen (lib/aiParseDocx.js) som strukturhint.
+// images: [{ filename, mimeType, buffer }]               (i dokumentrekkefølge)
 async function extractDocxStructure(buffer) {
   const zip = await JSZip.loadAsync(buffer);
 
@@ -85,7 +87,7 @@ async function extractDocxStructure(buffer) {
     }
 
     if (text || imageIndexes.length) {
-      paragraphs.push({ text, imageIndexes });
+      paragraphs.push({ text, style, imageIndexes });
     }
   }
 
